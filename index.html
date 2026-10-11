@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cubestorm</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0c4a6e;
+        color: #f0f9ff;
+        font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+        user-select: none;
+      }
+      canvas {
+        display: block;
+      }
+      #hud {
+        position: fixed;
+        top: 14px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 20px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+        pointer-events: none;
+      }
+      #hud small {
+        display: block;
+        font-size: 13px;
+        font-weight: 400;
+        opacity: 0.8;
+      }
+      #sub {
+        position: fixed;
+        top: 70px;
+        left: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+      }
+      #lives {
+        color: #fb7185;
+        font-size: 24px;
+      }
+      #status {
+        font-size: 14px;
+        color: #fde047;
+      }
+      #bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.15);
+      }
+      #fill {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: #f59e0b;
+      }
+      #banner {
+        position: fixed;
+        top: 28%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 44px;
+        font-weight: 700;
+        opacity: 0;
+        transition: opacity 0.4s;
+        text-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+      }
+      #banner.show {
+        opacity: 1;
+      }
+      #overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 24px;
+        text-align: center;
+        background: rgba(7, 43, 66, 0.82);
+      }
+      #overlay.hidden {
+        display: none;
+      }
+      #overlay h1 {
+        margin: 0;
+        font-size: 52px;
+        letter-spacing: 1px;
+      }
+      #overlay p {
+        margin: 0;
+        max-width: 460px;
+        line-height: 1.5;
+        opacity: 0.92;
+      }
+      #diff {
+        display: flex;
+        gap: 8px;
+      }
+      #diff button {
+        padding: 6px 16px;
+        border: 2px solid #f0f9ff;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      #diff button.on {
+        background: #f0f9ff;
+        color: #0c4a6e;
+      }
+      #action {
+        margin-top: 6px;
+        padding: 12px 34px;
+        border: 0;
+        border-radius: 10px;
+        background: #f59e0b;
+        color: #2b1a00;
+        font: inherit;
+        font-size: 20px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      #action:hover,
+      #action:focus-visible {
+        background: #fbbf24;
+        outline: 3px solid #fff;
+      }
+          #cross {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        pointer-events: none;
+        display: none;
+      }
+      #cross::before,
+      #cross::after {
+        content: '';
+        position: absolute;
+        background: #fff;
+        opacity: 0.85;
+      }
+      #cross::before {
+        left: 8px;
+        top: 0;
+        width: 2px;
+        height: 18px;
+      }
+      #cross::after {
+        top: 8px;
+        left: 0;
+        width: 18px;
+        height: 2px;
+      }
+      #cross.hit::before,
+      #cross.hit::after {
+        background: #f43f5e;
+      }
+      #flash {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 140px 40px #ef4444;
+        opacity: 0;
+        transition: opacity 0.5s;
+      }
+      #flash.on {
+        opacity: 0.8;
+        transition: none;
+      }
+      #fps,
+      #ammo {
+        position: fixed;
+        right: 18px;
+        pointer-events: none;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      }
+      #fps {
+        bottom: 16px;
+        font-size: 13px;
+        opacity: 0.75;
+      }
+      #ammo {
+        bottom: 38px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      #boss {
+        position: fixed;
+        top: 64px;
+        left: 25%;
+        right: 25%;
+        height: 10px;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+      }
+      #boss i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: #ef4444;
+      }
+      #toast {
+        position: fixed;
+        top: 110px;
+        right: 18px;
+        padding: 10px 16px;
+        background: rgba(0, 0, 0, 0.6);
+        border-left: 4px solid #f59e0b;
+        border-radius: 6px;
+        font-weight: 700;
+        opacity: 0;
+        transition: opacity 0.4s;
+        pointer-events: none;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      #logo {
+        width: 96px;
+        height: 96px;
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <div><small>Score</small><span id="score">0</span></div>
+      <div><small id="lvlname">Level</small><span id="level">1</span></div>
+      <div><small>Best</small><span id="best">0</span></div>
+    </div>
+    <div id="sub">
+      <span id="lives"></span><span id="coins"></span><span id="combo"></span
+      ><span id="status"></span>
+    </div>
+    <div id="bar"><i id="fill"></i></div>
+    <div id="banner"></div>
+    <div id="cross"></div>
+    <div id="flash"></div>
+    <div id="fps">60 FPS</div>
+    <div id="ammo"></div>
+    <div id="boss"><i id="bossfill"></i></div>
+    <div id="toast"></div>
+
+    <div id="overlay">
+      <svg id="logo" viewBox="0 0 100 100" aria-hidden="true">
+        <polygon points="50,8 90,30 50,52 10,30" fill="#fbbf24" />
+        <polygon points="10,30 50,52 50,94 10,72" fill="#f59e0b" />
+        <polygon points="90,30 50,52 50,94 90,72" fill="#b45309" />
+        <polygon points="56,26 38,56 50,56 44,80 66,46 54,46" fill="#0c4a6e" />
+      </svg>
+      <h1 id="title">Cubestorm</h1>
+      <p id="message">
+        Dodge or shoot the cubes. W A S D or arrows to move, Space to jump (twice for
+        a double jump), Shift to dash. Grab coins and power-ups, and stay on the
+        platform. Every level is faster, and the platform shrinks.
+      </p>
+      <div id="diff">
+        <button data-d="easy">1 Easy</button>
+        <button data-d="normal" class="on">2 Normal</button>
+        <button data-d="hard">3 Hard</button>
+        <button data-d="insane">4 Insane</button>
+      </div>
+      <button id="action">Start game</button>
+      <p id="wallet"></p>
+      <p><small>F or click shoot · Q reload · C first person · K skin · F3 FPS<br />P pause · M mute · R retry</small></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // ---------- settings ----------
+      const GRAVITY = -22
+      const JUMP_SPEED = 8.5
+      const DASH_SPEED = 20
+      const GROUND_W = 12
+      const GROUND_D = 40
+      const SPAWN_Z = -20
+      const LEVEL_TIME = 15
+      const MAX_LIVES = 5
+      const MAG = 12
+      const BOSS_EVERY = 4
+      const SKINS = ['#00ff00', '#38bdf8', '#f472b6', '#facc15', '#ffffff']
+
+      const LEVELS = [
+        { name: 'Calm Waters', bg: '#0c4a6e', floor: '#0369a1' },
+        { name: 'Rising Tide', bg: '#134e4a', floor: '#0f766e' },
+        { name: 'Swift Current', bg: '#14532d', floor: '#15803d' },
+        { name: 'Rapids', bg: '#365314', floor: '#4d7c0f' },
+        { name: 'Whirlpool', bg: '#713f12', floor: '#a16207' },
+        { name: 'Storm Front', bg: '#7c2d12', floor: '#c2410c' },
+        { name: 'Thunder', bg: '#7f1d1d', floor: '#b91c1c' },
+        { name: 'Typhoon', bg: '#581c87', floor: '#7e22ce' },
+        { name: 'Abyss', bg: '#312e81', floor: '#4338ca' },
+        { name: 'Maelstrom', bg: '#1e1b4b', floor: '#3730a3' },
+        { name: 'Chaos', bg: '#18181b', floor: '#3f3f46' },
+        { name: 'Endless Fury', bg: '#000000', floor: '#27272a' }
+      ]
+
+      const DIFFS = {
+        easy: { speed: 0.85, lives: 5, spawn: 1.25 },
+        normal: { speed: 1, lives: 3, spawn: 1 },
+        hard: { speed: 1.2, lives: 2, spawn: 0.8 },
+        insane: { speed: 1.45, lives: 1, spawn: 0.65 }
+      }
+
+      const ENEMY = {
+        normal: { color: '#ef4444', speed: 1, min: 0.8, max: 1.6 },
+        fast: { color: '#f97316', speed: 1.7, min: 0.6, max: 0.9 },
+        big: { color: '#a855f7', speed: 0.7, min: 2.2, max: 2.8 },
+        zig: { color: '#ec4899', speed: 1, min: 0.9, max: 1.1 },
+        hop: { color: '#b91c1c', speed: 1.1, min: 0.9, max: 1.2 },
+        bomb: { color: '#f5f5f4', speed: 1.2, min: 1, max: 1.3 },
+        boss: { color: '#7f1d1d', speed: 0.45, min: 4, max: 4 }
+      }
+
+      const POWER = {
+        shield: '#22d3ee',
+        slow: '#fde047',
+        double: '#4ade80',
+        life: '#f472b6',
+        magnet: '#a78bfa',
+        rapid: '#fb923c'
+      }
+
+      // ---------- scene ----------
+      const scene = new THREE.Scene()
+      scene.background = new THREE.Color(LEVELS[0].bg)
+      scene.fog = new THREE.Fog(LEVELS[0].bg, 22, 48)
+
+      const camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        200
+      )
+      camera.position.set(0, 5, 16)
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      renderer.shadowMap.enabled = true
+      document.body.appendChild(renderer.domElement)
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight
+        camera.updateProjectionMatrix()
+        renderer.setSize(window.innerWidth, window.innerHeight)
+      })
+
+      // ---------- box with simple physics ----------
+      class Box extends THREE.Mesh {
+        constructor({
+          width,
+          height,
+          depth,
+          color = '#00ff00',
+          position = { x: 0, y: 0, z: 0 }
+        }) {
+          super(
+            new THREE.BoxGeometry(width, height, depth),
+            new THREE.MeshStandardMaterial({ color })
+          )
+          this.width = width
+          this.height = height
+          this.depth = depth
+          this.position.set(position.x, position.y, position.z)
+          this.velocity = { x: 0, y: 0, z: 0 }
+          this.grounded = false
+          this.accel = 0
+        }
+
+        get left() {
+          return this.position.x - this.width / 2
+        }
+        get right() {
+          return this.position.x + this.width / 2
+        }
+        get bottom() {
+          return this.position.y - this.height / 2
+        }
+        get top() {
+          return this.position.y + this.height / 2
+        }
+        get back() {
+          return this.position.z - this.depth / 2
+        }
+        get front() {
+          return this.position.z + this.depth / 2
+        }
+
+        update(dt, ground) {
+          const prevBottom = this.bottom
+          this.velocity.z += this.accel * dt
+          this.velocity.y += GRAVITY * dt
+          this.position.x += this.velocity.x * dt
+          this.position.y += this.velocity.y * dt
+          this.position.z += this.velocity.z * dt
+
+          const overGround =
+            this.right > ground.left &&
+            this.left < ground.right &&
+            this.front > ground.back &&
+            this.back < ground.front
+
+          this.grounded = false
+          if (
+            overGround &&
+            this.velocity.y <= 0 &&
+            prevBottom >= ground.top - 0.01 &&
+            this.bottom <= ground.top
+          ) {
+            this.position.y = ground.top + this.height / 2
+            this.velocity.y = 0
+            this.grounded = true
+          }
+        }
+
+        dispose() {
+          this.geometry.dispose()
+          this.material.dispose()
+        }
+      }
+
+      function boxCollision(a, b) {
+        return (
+          a.right > b.left &&
+          a.left < b.right &&
+          a.top > b.bottom &&
+          a.bottom < b.top &&
+          a.front > b.back &&
+          a.back < b.front
+        )
+      }
+
+      // ---------- world ----------
+      const ground = new Box({
+        width: GROUND_W,
+        height: 0.5,
+        depth: GROUND_D,
+        color: LEVELS[0].floor,
+        position: { x: 0, y: -2, z: -2 }
+      })
+      ground.receiveShadow = true
+      scene.add(ground)
+
+      const player = new Box({ width: 1, height: 1, depth: 1 })
+      player.castShadow = true
+      scene.add(player)
+
+      const sun = new THREE.DirectionalLight(0xffffff, 1)
+      sun.position.set(4, 10, 6)
+      sun.castShadow = true
+      sun.shadow.mapSize.set(2048, 2048)
+      sun.shadow.camera.left = -20
+      sun.shadow.camera.right = 20
+      sun.shadow.camera.top = 30
+      sun.shadow.camera.bottom = -30
+      sun.shadow.camera.far = 60
+      scene.add(sun)
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5))
+
+      // starfield and lane markers give a stronger sense of speed
+      const STARS = 300
+      const starPos = new Float32Array(STARS * 3)
+      const starGeo = new THREE.BufferGeometry()
+      function resetStar(arr, i, anyZ) {
+        arr[i * 3] = (Math.random() - 0.5) * 60
+        arr[i * 3 + 1] = Math.random() * 20 - 1
+        arr[i * 3 + 2] = anyZ ? -40 + Math.random() * 60 : -40
+      }
+      for (let i = 0; i < STARS; i++) resetStar(starPos, i, true)
+      starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3))
+      scene.add(
+        new THREE.Points(
+          starGeo,
+          new THREE.PointsMaterial({ color: '#ffffff', size: 0.12, fog: false })
+        )
+      )
+      const lanes = []
+      for (let i = 0; i < 10; i++) {
+        const lane = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.02, 1.4),
+          new THREE.MeshBasicMaterial({
+            color: '#ffffff',
+            transparent: true,
+            opacity: 0.35
+          })
+        )
+        lane.position.set(0, ground.top + 0.011, -20 + i * 4)
+        scene.add(lane)
+        lanes.push(lane)
+      }
+
+      // ---------- sound (Web Audio, no files needed) ----------
+      let audioCtx = null
+      let muted = false
+      let musicTimer = null
+      let musicStep = 0
+      const bassLine = [110, 110, 164.8, 110, 130.8, 130.8, 196, 130.8]
+
+      function tone(freq, dur, type = 'sine', vol = 0.12, slideTo = null) {
+        if (muted || !audioCtx) return
+        const t = audioCtx.currentTime
+        const osc = audioCtx.createOscillator()
+        const gain = audioCtx.createGain()
+        osc.type = type
+        osc.frequency.setValueAtTime(freq, t)
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t + dur)
+        gain.gain.setValueAtTime(vol, t)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+        osc.connect(gain)
+        gain.connect(audioCtx.destination)
+        osc.start(t)
+        osc.stop(t + dur)
+      }
+
+      const sfx = {
+        jump: () => tone(320, 0.16, 'square', 0.06, 640),
+        jump2: () => tone(480, 0.16, 'square', 0.06, 960),
+        shoot: () => tone(900, 0.07, 'square', 0.04, 200),
+        boom: () => tone(90, 0.5, 'sawtooth', 0.15, 30),
+        reload: () => {
+          tone(300, 0.1, 'square', 0.05)
+          setTimeout(() => tone(500, 0.12, 'square', 0.05), 600)
+        },
+        land: () => tone(120, 0.08, 'sine', 0.12, 60),
+        dodge: () => tone(880, 0.12, 'triangle', 0.1, 1320),
+        coin: () => tone(1200, 0.1, 'square', 0.05, 1800),
+        power: () => tone(500, 0.3, 'triangle', 0.12, 1500),
+        hit: () => tone(200, 0.3, 'sawtooth', 0.14, 60),
+        shield: () => tone(700, 0.2, 'sine', 0.12, 200),
+        dash: () => tone(260, 0.18, 'sawtooth', 0.06, 900),
+        levelUp: () => {
+          tone(523, 0.12, 'triangle', 0.1)
+          setTimeout(() => tone(784, 0.2, 'triangle', 0.1), 110)
+        },
+        over: () => {
+          tone(380, 0.7, 'sawtooth', 0.14, 50)
+          tone(190, 0.8, 'square', 0.08, 40)
+        }
+      }
+
+      // music gets faster with every level
+      function startMusic() {
+        stopMusic()
+        const gap = Math.max(110, 240 - level * 12)
+        musicTimer = setInterval(() => {
+          tone(bassLine[musicStep++ % bassLine.length], 0.16, 'triangle', 0.05)
+        }, gap)
+      }
+
+      function stopMusic() {
+        clearInterval(musicTimer)
+        musicTimer = null
+      }
+
+      // ---------- game state ----------
+      const $ = (id) => document.getElementById(id)
+      const ui = {
+        overlay: $('overlay'),
+        title: $('title'),
+        message: $('message'),
+        action: $('action'),
+        score: $('score'),
+        level: $('level'),
+        lvlname: $('lvlname'),
+        best: $('best'),
+        lives: $('lives'),
+        coins: $('coins'),
+        combo: $('combo'),
+        status: $('status'),
+        fill: $('fill'),
+        banner: $('banner'),
+        cross: $('cross'),
+        flash: $('flash'),
+        fps: $('fps'),
+        ammo: $('ammo'),
+        boss: $('boss'),
+        bossFill: $('bossfill'),
+        toast: $('toast')
+      }
+
+      let state = 'ready' // ready | playing | paused | over
+      let diffName = 'normal'
+      let score = 0
+      let level = 1
+      let elapsed = 0
+      let spawnTimer = 0
+      let coinTimer = 0
+      let powerTimer = 0
+      let wallTimer = 0
+      let best = 0
+      let wasGrounded = true
+      let lives = 3
+      let coins = 0
+      let combo = 0
+      let maxCombo = 0
+      let dodged = 0
+      let jumps = 0
+      let invuln = 0
+      let shield = false
+      let slowT = 0
+      let doubleT = 0
+      let dashT = 0
+      let dashCd = 0
+      let shake = 0
+      let bannerT = 0
+      let firstPerson = false
+      let showFps = true
+      let ammo = MAG
+      let reloadT = 0
+      let fireCd = 0
+      let rapidT = 0
+      let magnetT = 0
+      let shots = 0
+      let shotHits = 0
+      let kills = 0
+      let streak = 0
+      let wallet = 0
+      let skin = 0
+      let boss = null
+      let bossLevel = 0
+      let mouseDown = false
+      let gamepadFire = false
+      let gpPrev = {}
+      let fpsFrames = 0
+      let fpsTime = performance.now()
+      const bullets = []
+      const unlocked = {}
+      const dashDir = { x: 0, z: -1 }
+      const enemies = []
+      const pickups = []
+      const particles = []
+      const keys = {}
+      const partGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2)
+      const bgTarget = new THREE.Color(LEVELS[0].bg)
+      const floorTarget = new THREE.Color(LEVELS[0].floor)
+
+      try {
+        best = Number(localStorage.getItem('cubeDodgeBest')) || 0
+        const meta = JSON.parse(localStorage.getItem('cubestormMeta') || '{}')
+        wallet = meta.wallet || 0
+        skin = meta.skin || 0
+        Object.assign(unlocked, meta.unlocked || {})
+      } catch (e) {}
+      ui.best.textContent = best
+
+      applySkin()
+      updateWallet()
+
+      // ---------- helpers ----------
+      function currentSettings() {
+        return LEVELS[Math.min(level, LEVELS.length) - 1]
+      }
+
+      function worldSpeed() {
+        return (4.5 + level * 0.9) * DIFFS[diffName].speed
+      }
+
+      function moveSpeed() {
+        return 6.5 + level * 0.35
+      }
+
+      function platformWidth() {
+        return Math.max(6, GROUND_W - (level - 1) * 0.5)
+      }
+
+      function removeFrom(list, index) {
+        const obj = list[index]
+        scene.remove(obj)
+        obj.dispose()
+        list.splice(index, 1)
+      }
+
+      function clearAll() {
+        while (enemies.length) removeFrom(enemies, 0)
+        while (pickups.length) removeFrom(pickups, 0)
+        while (particles.length) {
+          const p = particles.pop()
+          scene.remove(p)
+          p.material.dispose()
+        }
+      }
+
+      function showBanner(text) {
+        ui.banner.textContent = text
+        ui.banner.classList.add('show')
+        bannerT = 1.8
+      }
+
+      function burst(pos, color, count = 12, power = 4) {
+        for (let i = 0; i < count && particles.length < 250; i++) {
+          const p = new THREE.Mesh(
+            partGeo,
+            new THREE.MeshBasicMaterial({ color })
+          )
+          p.position.copy(pos)
+          p.vel = new THREE.Vector3(
+            (Math.random() - 0.5) * power,
+            Math.random() * power,
+            (Math.random() - 0.5) * power
+          )
+          p.life = 0.6
+          scene.add(p)
+          particles.push(p)
+        }
+      }
+
+      function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i]
+          p.life -= dt
+          p.vel.y -= 12 * dt
+          p.position.addScaledVector(p.vel, dt)
+          p.scale.setScalar(Math.max(p.life / 0.6, 0.01))
+          if (p.life <= 0) {
+            scene.remove(p)
+            p.material.dispose()
+            particles.splice(i, 1)
+          }
+        }
+      }
+
+      function showOverlay(title, message, button) {
+        ui.title.textContent = title
+        ui.message.textContent = message
+        ui.action.textContent = button
+        ui.overlay.classList.remove('hidden')
+        ui.action.focus()
+        updateWallet()
+      }
+
+      function setDifficulty(name) {
+        diffName = name
+        document.querySelectorAll('#diff button').forEach((b) => {
+          b.classList.toggle('on', b.dataset.d === name)
+        })
+      }
+
+      function resetPlayer() {
+        player.position.set(0, ground.top + player.height / 2, 8)
+        player.velocity = { x: 0, y: 0, z: 0 }
+        player.grounded = true
+        player.visible = true
+        wasGrounded = true
+        jumps = 0
+      }
+
+      function startGame() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume()
+
+        clearAll()
+        score = 0
+        level = 1
+        elapsed = 0
+        spawnTimer = 0.5
+        coinTimer = 2
+        powerTimer = 10
+        wallTimer = 12
+        lives = DIFFS[diffName].lives
+        coins = 0
+        combo = 0
+        maxCombo = 0
+        dodged = 0
+        invuln = 0
+        shield = false
+        slowT = 0
+        doubleT = 0
+        dashT = 0
+        dashCd = 0
+        shake = 0
+        ammo = MAG
+        reloadT = 0
+        fireCd = 0
+        rapidT = 0
+        magnetT = 0
+        shots = 0
+        shotHits = 0
+        kills = 0
+        streak = 0
+        boss = null
+        bossLevel = 0
+        while (bullets.length) removeFrom(bullets, 0)
+        applySkin()
+        applyLevelLook(true)
+        resetPlayer()
+        state = 'playing'
+        ui.overlay.classList.add('hidden')
+        ui.action.blur()
+        startMusic()
+        showBanner('Level 1: ' + LEVELS[0].name)
+      }
+
+      function pauseGame() {
+        if (state === 'playing') {
+          state = 'paused'
+          stopMusic()
+          showOverlay('Paused', 'Take a breather.', 'Resume')
+        } else if (state === 'paused') {
+          state = 'playing'
+          ui.overlay.classList.add('hidden')
+          startMusic()
+        }
+      }
+
+      function applyLevelLook(instant) {
+        const cfg = currentSettings()
+        bgTarget.set(cfg.bg)
+        floorTarget.set(cfg.floor)
+        if (instant) {
+          scene.background.copy(bgTarget)
+          scene.fog.color.copy(bgTarget)
+          ground.material.color.copy(floorTarget)
+          ground.width = GROUND_W
+          ground.scale.x = 1
+        }
+      }
+
+      function gameOver(reason) {
+        state = 'over'
+        stopMusic()
+        sfx.over()
+        player.visible = true
+        saveMeta()
+        const finalScore = Math.floor(score)
+        let note = ''
+        if (finalScore > best) {
+          best = finalScore
+          note = ' New best score!'
+          try {
+            localStorage.setItem('cubeDodgeBest', String(best))
+          } catch (e) {}
+        }
+        ui.best.textContent = best
+        showOverlay(
+          'Game over',
+          reason +
+            ' Score ' + finalScore + ', best ' + best + '.' + note +
+            ' Level ' + level + ', ' + dodged + ' dodged, ' + coins +
+            ' coins, best combo ' + maxCombo + ', time ' +
+            Math.floor(elapsed) + 's, kills ' + kills + ', accuracy ' +
+            (shots ? Math.round((shotHits / shots) * 100) : 0) + '%.',
+          'Retry'
+        )
+      }
+
+      // ---------- shooting, boss, meta, effects ----------
+      const gp = { x: 0, z: 0 }
+      let toastTimer = null
+      const ACHIEVEMENTS = [
+        { id: 'dodge10', text: 'Dodger: 10 cubes dodged', ok: () => dodged >= 10 },
+        { id: 'dodge100', text: 'Untouchable: 100 dodged', ok: () => dodged >= 100 },
+        { id: 'coins25', text: 'Collector: 25 coins in a run', ok: () => coins >= 25 },
+        { id: 'lvl5', text: 'Level 5 reached', ok: () => level >= 5 },
+        { id: 'lvl10', text: 'Level 10 reached', ok: () => level >= 10 },
+        { id: 'kills10', text: 'Sharpshooter: 10 kills', ok: () => kills >= 10 },
+        { id: 'combo20', text: 'Combo master: 20 combo', ok: () => maxCombo >= 20 }
+      ]
+
+      function saveMeta() {
+        try {
+          const data = { wallet, skin, unlocked }
+          localStorage.setItem('cubestormMeta', JSON.stringify(data))
+        } catch (e) {}
+      }
+
+      function updateWallet() {
+        $('wallet').textContent =
+          'Wallet ' + wallet + ' coins · Skin ' + (skin + 1) + ' of ' +
+          SKINS.length + ' · Achievements ' + Object.keys(unlocked).length
+      }
+
+      function applySkin() {
+        player.material.color.set(SKINS[skin % SKINS.length])
+      }
+
+      function cycleSkin() {
+        skin = (skin + 1) % SKINS.length
+        applySkin()
+        saveMeta()
+        updateWallet()
+      }
+
+      function toast(text) {
+        ui.toast.textContent = text
+        ui.toast.classList.add('show')
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2500)
+      }
+
+      function unlock(id, text) {
+        if (unlocked[id]) return
+        unlocked[id] = true
+        toast('Achievement: ' + text)
+        sfx.power()
+        saveMeta()
+      }
+
+      function checkAchievements() {
+        ACHIEVEMENTS.forEach((a) => {
+          if (a.ok()) unlock(a.id, a.text)
+        })
+      }
+
+      function flashDamage() {
+        ui.flash.classList.add('on')
+        setTimeout(() => ui.flash.classList.remove('on'), 60)
+      }
+
+      function hitMarker() {
+        ui.cross.classList.add('hit')
+        setTimeout(() => ui.cross.classList.remove('hit'), 90)
+      }
+
+      function toggleView() {
+        firstPerson = !firstPerson
+        camera.fov = firstPerson ? 85 : 70
+        camera.updateProjectionMatrix()
+        ui.cross.style.display = firstPerson ? 'block' : 'none'
+        toast(firstPerson ? 'First-person view' : 'Third-person view')
+      }
+
+      function toggleFps() {
+        showFps = !showFps
+        ui.fps.style.display = showFps ? 'block' : 'none'
+      }
+
+      function fpsTick() {
+        fpsFrames++
+        const now = performance.now()
+        if (now - fpsTime >= 500) {
+          ui.fps.textContent = Math.round((fpsFrames * 1000) / (now - fpsTime)) + ' FPS'
+          fpsFrames = 0
+          fpsTime = now
+        }
+      }
+
+      function updateStars(dt) {
+        const speed = state === 'playing' ? worldSpeed() * 2 : 4
+        for (let i = 0; i < STARS; i++) {
+          starPos[i * 3 + 2] += speed * dt
+          if (starPos[i * 3 + 2] > 20) resetStar(starPos, i, false)
+        }
+        starGeo.attributes.position.needsUpdate = true
+        const laneSpeed = state === 'playing' ? worldSpeed() : 3
+        lanes.forEach((lane) => {
+          lane.position.z += laneSpeed * dt
+          if (lane.position.z > 18) lane.position.z -= 40
+        })
+      }
+
+      function pollGamepad() {
+        const pad = navigator.getGamepads && navigator.getGamepads()[0]
+        gp.x = 0
+        gp.z = 0
+        gamepadFire = false
+        if (!pad) return
+        if (Math.abs(pad.axes[0]) > 0.2) gp.x = pad.axes[0]
+        if (Math.abs(pad.axes[1]) > 0.2) gp.z = pad.axes[1]
+        const a = !!(pad.buttons[0] && pad.buttons[0].pressed)
+        const b = !!(pad.buttons[1] && pad.buttons[1].pressed)
+        gamepadFire = !!(pad.buttons[7] && pad.buttons[7].pressed)
+        if (a && !gpPrev.a) tryJump()
+        if (b && !gpPrev.b) tryDash()
+        gpPrev = { a, b }
+      }
+
+      function reload() {
+        if (state !== 'playing' || reloadT > 0 || ammo === MAG) return
+        reloadT = 1.1
+        sfx.reload()
+      }
+
+      function fire() {
+        if (state !== 'playing' || fireCd > 0 || reloadT > 0) return
+        if (ammo <= 0) return reload()
+        if (rapidT <= 0) ammo--
+        shots++
+        fireCd = rapidT > 0 ? 0.08 : 0.2
+        const b = new Box({
+          width: 0.2,
+          height: 0.2,
+          depth: 0.8,
+          color: '#fde047',
+          position: {
+            x: player.position.x,
+            y: player.position.y,
+            z: player.position.z - 1
+          }
+        })
+        b.material.emissive = new THREE.Color('#fde047')
+        b.velocity.z = -45
+        scene.add(b)
+        bullets.push(b)
+        sfx.shoot()
+        if (ammo === 0 && rapidT <= 0) reload()
+      }
+
+      function explode(e) {
+        burst(e.position, '#fb923c', 30, 9)
+        sfx.boom()
+        shake = 0.4
+        for (let k = enemies.length - 1; k >= 0; k--) {
+          const o = enemies[k]
+          if (o !== e && o.kind !== 'boss' && o.position.distanceTo(e.position) < 4) {
+            burst(o.position, '#fb923c', 6, 4)
+            kills++
+            removeFrom(enemies, k)
+          }
+        }
+      }
+
+      function damageEnemy(e) {
+        e.hp--
+        hitMarker()
+        burst(e.position, '#' + e.material.color.getHexString(), 4, 3)
+        if (e.hp > 0) return
+        kills++
+        streak++
+        score += (e.kind === 'boss' ? 300 : 15) * scoreMult()
+        if (e.kind === 'bomb') explode(e)
+        if (e.kind === 'boss') {
+          boss = null
+          shake = 0.6
+          showBanner('Boss down!')
+          unlock('boss', 'Boss slayer')
+          const half = ground.width / 2 - 1
+          for (let i = 0; i < 12; i++) {
+            const x = e.position.x + (Math.random() - 0.5) * 4
+            spawnPickup('coin', THREE.MathUtils.clamp(x, -half, half), e.position.z - i)
+          }
+        }
+        if (streak === 5) showBanner('Killing spree!')
+        if (streak === 10) showBanner('Rampage!')
+        const idx = enemies.indexOf(e)
+        if (idx >= 0) removeFrom(enemies, idx)
+      }
+
+      function updateBullets(dt) {
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i]
+          b.position.z += b.velocity.z * dt
+          let used = false
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            if (boxCollision(b, enemies[j])) {
+              used = true
+              shotHits++
+              damageEnemy(enemies[j])
+              break
+            }
+          }
+          if (used || b.position.z < SPAWN_Z - 6) removeFrom(bullets, i)
+        }
+      }
+
+      function spawnBoss() {
+        bossLevel = level
+        spawnEnemy('boss', 0, 4)
+        boss = enemies[enemies.length - 1]
+        boss.hp = boss.maxHp = 12 + level * 2
+        boss.accel = 0
+        boss.velocity.z = 2.5 + level * 0.1
+        showBanner('BOSS!')
+        sfx.boom()
+      }
+
+      // ---------- spawning ----------
+      function pickEnemyKind() {
+        const pool = ['normal', 'normal']
+        if (level >= 2) pool.push('fast')
+        if (level >= 3) pool.push('big')
+        if (level >= 5) pool.push('zig')
+        if (level >= 7) pool.push('hop')
+        if (level >= 4) pool.push('bomb')
+        return pool[Math.floor(Math.random() * pool.length)]
+      }
+
+      function spawnEnemy(kind = pickEnemyKind(), x = null, size = null) {
+        const cfg = ENEMY[kind]
+        const s = size || cfg.min + Math.random() * (cfg.max - cfg.min)
+        const half = (ground.width - s) / 2
+        const enemy = new Box({
+          width: s,
+          height: s,
+          depth: s,
+          color: cfg.color,
+          position: {
+            x: x === null ? (Math.random() * 2 - 1) * half : x,
+            y: ground.top + s / 2,
+            z: SPAWN_Z
+          }
+        })
+        enemy.kind = kind
+        enemy.velocity.z = (worldSpeed() + Math.random() * 2) * cfg.speed
+        enemy.accel = 1.2
+        enemy.passed = false
+        enemy.phase = Math.random() * 6
+        enemy.hp = 1
+        enemy.age = 0
+        enemy.castShadow = true
+        scene.add(enemy)
+        enemies.push(enemy)
+      }
+
+      function spawnWall() {
+        const size = 1.3
+        const count = Math.floor(ground.width / size)
+        const gap = 1 + Math.floor(Math.random() * (count - 2))
+        const start = -ground.width / 2 + size / 2
+        for (let i = 0; i < count; i++) {
+          if (i === gap || i === gap + 1) continue
+          spawnEnemy('normal', start + i * size, size)
+          enemies[enemies.length - 1].velocity.z = worldSpeed() * 0.9
+          enemies[enemies.length - 1].accel = 0
+        }
+        showBanner('Wall incoming!')
+      }
+
+      function spawnPickup(kind, x, z) {
+        const color = kind === 'coin' ? '#facc15' : POWER[kind]
+        const size = kind === 'coin' ? 0.45 : 0.7
+        const item = new Box({
+          width: size,
+          height: size,
+          depth: size,
+          color,
+          position: { x, y: ground.top + size / 2 + 0.2, z }
+        })
+        item.material.emissive = new THREE.Color(color)
+        item.material.emissiveIntensity = 0.5
+        item.kind = kind
+        item.velocity.z = worldSpeed() * 0.8
+        scene.add(item)
+        pickups.push(item)
+      }
+
+      function spawnCoins() {
+        const half = ground.width / 2 - 1
+        const x = (Math.random() * 2 - 1) * half
+        for (let i = 0; i < 4; i++) spawnPickup('coin', x, SPAWN_Z - i * 1.5)
+      }
+
+      function spawnPower() {
+        const kinds = ['shield', 'slow', 'double', 'magnet', 'rapid']
+        if (lives < MAX_LIVES) kinds.push('life')
+        const half = ground.width / 2 - 1
+        spawnPickup(
+          kinds[Math.floor(Math.random() * kinds.length)],
+          (Math.random() * 2 - 1) * half,
+          SPAWN_Z
+        )
+      }
+
+      // ---------- gameplay events ----------
+      function collect(item) {
+        burst(item.position, '#' + item.material.color.getHexString(), 10, 3)
+        if (item.kind === 'coin') {
+          coins++
+          wallet++
+          score += 5 * scoreMult()
+          sfx.coin()
+          return
+        }
+        sfx.power()
+        if (item.kind === 'shield') shield = true
+        if (item.kind === 'slow') slowT = 6
+        if (item.kind === 'double') doubleT = 8
+        if (item.kind === 'life') lives = Math.min(MAX_LIVES, lives + 1)
+        if (item.kind === 'magnet') magnetT = 10
+        if (item.kind === 'rapid') {
+          rapidT = 8
+          ammo = MAG
+          reloadT = 0
+        }
+        showBanner(item.kind === 'life' ? 'Extra life!' : item.kind + '!')
+      }
+
+      function comboMult() {
+        return Math.min(4, 1 + Math.floor(combo / 5) * 0.5)
+      }
+
+      function scoreMult() {
+        return comboMult() * (doubleT > 0 ? 2 : 1)
+      }
+
+      function hitPlayer(enemy, index) {
+        burst(enemy.position, '#' + enemy.material.color.getHexString(), 16, 6)
+        if (enemy === boss) boss = null
+        removeFrom(enemies, index)
+        if (shield) {
+          shield = false
+          sfx.shield()
+          return false
+        }
+        lives--
+        combo = 0
+        invuln = 1.6
+        streak = 0
+        flashDamage()
+        shake = 0.5
+        sfx.hit()
+        return lives <= 0
+      }
+
+      function levelUp() {
+        applyLevelLook(false)
+        sfx.levelUp()
+        shake = 0.2
+        if (level % 5 === 0 && lives < MAX_LIVES) {
+          lives++
+          toast('Bonus life!')
+        }
+        if (level <= LEVELS.length) {
+          showBanner('Level ' + level + ': ' + currentSettings().name)
+        } else {
+          showBanner('Endless Fury continues...')
+        }
+        if (state === 'playing') startMusic()
+      }
+
+      // ---------- main update ----------
+      function update(dt) {
+        elapsed += dt
+        score += dt * 5 * scoreMult()
+
+        const newLevel = 1 + Math.floor(elapsed / LEVEL_TIME)
+        if (newLevel !== level) {
+          level = newLevel
+          levelUp()
+        }
+
+        // timers
+        invuln = Math.max(0, invuln - dt)
+        slowT = Math.max(0, slowT - dt)
+        doubleT = Math.max(0, doubleT - dt)
+        dashCd = Math.max(0, dashCd - dt)
+        shake = Math.max(0, shake - dt)
+        const edt = dt * (slowT > 0 ? 0.5 : 1)
+        rapidT = Math.max(0, rapidT - dt)
+        magnetT = Math.max(0, magnetT - dt)
+        fireCd = Math.max(0, fireCd - dt)
+        if (reloadT > 0) {
+          reloadT -= dt
+          if (reloadT <= 0) ammo = MAG
+        }
+        pollGamepad()
+        if (mouseDown || keys.KeyF || gamepadFire) fire()
+        if (level % BOSS_EVERY === 0 && bossLevel !== level) spawnBoss()
+        updateBullets(dt)
+        checkAchievements()
+
+        // platform shrinks as levels rise
+        const targetW = platformWidth()
+        ground.width += (targetW - ground.width) * Math.min(1, dt * 2)
+        ground.scale.x = ground.width / GROUND_W
+
+        // movement
+        const left = keys.KeyA || keys.ArrowLeft
+        const right = keys.KeyD || keys.ArrowRight
+        const up = keys.KeyW || keys.ArrowUp
+        const down = keys.KeyS || keys.ArrowDown
+        let mx = (right ? 1 : 0) - (left ? 1 : 0) + gp.x
+        let mz = (down ? 1 : 0) - (up ? 1 : 0) + gp.z
+        let speed = moveSpeed()
+        if (mx || mz) {
+          const len = Math.hypot(mx, mz)
+          dashDir.x = mx / len
+          dashDir.z = mz / len
+        }
+        if (dashT > 0) {
+          dashT -= dt
+          mx = dashDir.x
+          mz = dashDir.z
+          speed = DASH_SPEED
+          if (Math.random() < 0.7) burst(player.position, '#bbf7d0', 1, 1)
+        }
+        const len = Math.hypot(mx, mz) || 1
+        player.velocity.x = (mx / len) * speed * (mx || mz ? 1 : 0)
+        player.velocity.z = (mz / len) * speed * (mx || mz ? 1 : 0)
+        player.update(dt, ground)
+        player.position.z = THREE.MathUtils.clamp(player.position.z, -16, 16)
+
+        if (player.grounded) jumps = 0
+        if (player.grounded && !wasGrounded) sfx.land()
+        wasGrounded = player.grounded
+
+        // player look: blink when hurt, glow when shielded
+        player.visible =
+          !firstPerson && (invuln <= 0 || Math.floor(elapsed * 14) % 2 === 0)
+        player.material.emissive.set(shield ? '#22d3ee' : '#000000')
+
+        if (player.position.y < -8) {
+          lives = 0
+          return gameOver('You fell off the platform.')
+        }
+
+        // spawning gets faster with each level
+        const diff = DIFFS[diffName]
+        spawnTimer -= dt
+        if (spawnTimer <= 0) {
+          spawnEnemy()
+          if (level >= 6 && Math.random() < 0.3) spawnEnemy()
+          spawnTimer = Math.max(0.28, 1.4 - 0.1 * (level - 1)) * diff.spawn
+        }
+        coinTimer -= dt
+        if (coinTimer <= 0) {
+          spawnCoins()
+          coinTimer = 3 + Math.random() * 2
+        }
+        powerTimer -= dt
+        if (powerTimer <= 0) {
+          spawnPower()
+          powerTimer = 11 + Math.random() * 5
+        }
+        wallTimer -= dt
+        if (level >= 4 && wallTimer <= 0) {
+          spawnWall()
+          wallTimer = Math.max(6, 16 - level)
+        }
+
+        // enemies
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i]
+          enemy.age += edt
+          if (enemy.kind === 'zig') {
+            enemy.velocity.x = Math.sin(enemy.age * 3 + enemy.phase) * 4
+            const limit = (ground.width - enemy.width) / 2
+            enemy.position.x = THREE.MathUtils.clamp(
+              enemy.position.x,
+              -limit,
+              limit
+            )
+          }
+          if (enemy.kind === 'boss') {
+            enemy.velocity.x = Math.sin(enemy.age * 1.2) * 3
+            const lim = (ground.width - enemy.width) / 2
+            enemy.position.x = THREE.MathUtils.clamp(enemy.position.x, -lim, lim)
+          }
+          if (enemy.kind === 'hop' && enemy.grounded) enemy.velocity.y = 7
+          enemy.update(edt, ground)
+
+          if (boxCollision(player, enemy)) {
+            if (invuln > 0 || dashT > 0) {
+              if (enemy.kind === 'boss') continue
+              burst(enemy.position, '#ffffff', 8, 4)
+              removeFrom(enemies, i)
+              continue
+            }
+            if (hitPlayer(enemy, i)) return gameOver('Out of lives.')
+            continue
+          }
+
+          if (!enemy.passed && enemy.back > player.front) {
+            enemy.passed = true
+            dodged++
+            combo++
+            maxCombo = Math.max(maxCombo, combo)
+            score += 10 * scoreMult()
+            sfx.dodge()
+          }
+
+          if (enemy.position.z > 18) {
+            if (enemy === boss) boss = null
+            removeFrom(enemies, i)
+          }
+        }
+
+        // pickups
+        for (let i = pickups.length - 1; i >= 0; i--) {
+          const item = pickups[i]
+          if (magnetT > 0 && item.position.distanceTo(player.position) < 10) {
+            item.position.x += (player.position.x - item.position.x) * Math.min(1, dt * 6)
+            item.position.z += (player.position.z - item.position.z) * Math.min(1, dt * 3)
+          }
+          item.update(dt, ground)
+          item.rotation.y += dt * 3
+          if (boxCollision(player, item)) {
+            collect(item)
+            removeFrom(pickups, i)
+          } else if (item.position.z > 18) {
+            removeFrom(pickups, i)
+          }
+        }
+
+        updateParticles(dt)
+      }
+
+      function updateHud() {
+        ui.score.textContent = Math.floor(score)
+        ui.level.textContent = level
+        ui.lvlname.textContent = currentSettings().name
+        ui.lives.textContent = '♥'.repeat(Math.max(0, lives))
+        ui.coins.textContent = 'Coins ' + coins
+        ui.combo.textContent =
+          combo > 1 ? 'Combo ' + combo + ' (x' + scoreMult().toFixed(1) + ')' : ''
+        const bits = []
+        if (shield) bits.push('Shield')
+        if (slowT > 0) bits.push('Slow ' + Math.ceil(slowT) + 's')
+        if (doubleT > 0) bits.push('x2 ' + Math.ceil(doubleT) + 's')
+        if (magnetT > 0) bits.push('Magnet ' + Math.ceil(magnetT) + 's')
+        if (rapidT > 0) bits.push('Rapid ' + Math.ceil(rapidT) + 's')
+        bits.push(dashCd > 0 ? 'Dash ' + dashCd.toFixed(1) + 's' : 'Dash ready')
+        ui.status.textContent = bits.join(' · ')
+        ui.fill.style.width = ((elapsed % LEVEL_TIME) / LEVEL_TIME) * 100 + '%'
+        ui.ammo.textContent =
+          reloadT > 0 ? 'Reloading...' : rapidT > 0 ? 'Rapid fire' : ammo + ' / ' + MAG
+        ui.boss.style.display = boss ? 'block' : 'none'
+        if (boss) ui.bossFill.style.width = (boss.hp / boss.maxHp) * 100 + '%'
+      }
+
+      // ---------- input ----------
+      function tryJump() {
+        if (state !== 'playing') return
+        if (player.grounded) {
+          player.velocity.y = JUMP_SPEED
+          player.grounded = false
+          jumps = 1
+          sfx.jump()
+        } else if (jumps === 1) {
+          player.velocity.y = JUMP_SPEED * 0.9
+          jumps = 2
+          burst(player.position, '#ffffff', 8, 3)
+          sfx.jump2()
+        }
+      }
+
+      function tryDash() {
+        if (state !== 'playing' || dashCd > 0) return
+        dashT = 0.18
+        dashCd = 1.5
+        sfx.dash()
+      }
+
+      window.addEventListener('keydown', (event) => {
+        if (['Space', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
+          event.preventDefault()
+        }
+        if (event.repeat) return
+        keys[event.code] = true
+
+        if (event.code === 'KeyM') {
+          muted = !muted
+          if (muted) stopMusic()
+          else if (state === 'playing') startMusic()
+        }
+        if (event.code === 'KeyP' || event.code === 'Escape') pauseGame()
+        if (event.code === 'KeyR' && state !== 'paused') startGame()
+        if (event.code === 'Enter' && (state === 'ready' || state === 'over')) {
+          startGame()
+        }
+        if (state === 'ready' || state === 'over') {
+          if (event.code === 'Digit1') setDifficulty('easy')
+          if (event.code === 'Digit2') setDifficulty('normal')
+          if (event.code === 'Digit3') setDifficulty('hard')
+          if (event.code === 'Digit4') setDifficulty('insane')
+        }
+        if (event.code === 'Space') tryJump()
+        if (event.code === 'KeyC') toggleView()
+        if (event.code === 'F3') {
+          event.preventDefault()
+          toggleFps()
+        }
+        if (event.code === 'KeyQ') reload()
+        if (event.code === 'KeyK' && (state === 'ready' || state === 'over')) {
+          cycleSkin()
+        }
+        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') tryDash()
+      })
+
+      window.addEventListener('keyup', (event) => {
+        keys[event.code] = false
+      })
+
+      window.addEventListener('blur', () => {
+        Object.keys(keys).forEach((code) => (keys[code] = false))
+        if (state === 'playing') pauseGame()
+      })
+
+      window.addEventListener('mousedown', (event) => {
+        if (event.button === 0 && state === 'playing') {
+          mouseDown = true
+          fire()
+        }
+      })
+      window.addEventListener('mouseup', () => {
+        mouseDown = false
+      })
+
+      document.querySelectorAll('#diff button').forEach((button) => {
+        button.addEventListener('click', () => setDifficulty(button.dataset.d))
+      })
+
+      ui.action.addEventListener('click', () => {
+        if (state === 'paused') pauseGame()
+        else startGame()
+      })
+
+      // ---------- main loop ----------
+      const clock = new THREE.Clock()
+      const lookTarget = new THREE.Vector3()
+      resetPlayer()
+
+      function animate() {
+        requestAnimationFrame(animate)
+        const dt = Math.min(clock.getDelta(), 0.05)
+
+        if (state === 'playing') update(dt)
+        else if (state === 'over') updateParticles(dt)
+        updateStars(dt)
+        fpsTick()
+        updateHud()
+
+        // smooth theme change between levels
+        const fade = Math.min(1, dt * 2)
+        scene.background.lerp(bgTarget, fade)
+        scene.fog.color.copy(scene.background)
+        ground.material.color.lerp(floorTarget, fade)
+
+        // level banner fades out
+        if (bannerT > 0) {
+          bannerT -= dt
+          if (bannerT <= 0) ui.banner.classList.remove('show')
+        }
+
+        // smooth chase camera with hit shake
+        const follow = 1 - Math.pow(0.001, dt)
+        camera.position.x += (player.position.x * 0.6 - camera.position.x) * follow
+        camera.position.y += (5 - camera.position.y) * follow
+        camera.position.z += (player.position.z + 8 - camera.position.z) * follow
+        lookTarget.set(player.position.x * 0.6, 0, player.position.z - 6)
+        camera.lookAt(lookTarget)
+        if (firstPerson) {
+          camera.position.set(
+            player.position.x,
+            player.position.y + 0.8,
+            player.position.z - 0.3
+          )
+          camera.lookAt(player.position.x, player.position.y + 0.6, player.position.z - 12)
+        }
+        if (state !== 'playing') player.visible = !firstPerson
+        if (shake > 0) {
+          camera.position.x += (Math.random() - 0.5) * shake * 0.6
+          camera.position.y += (Math.random() - 0.5) * shake * 0.6
+        }
+
+        renderer.render(scene, camera)
+      }
+      animate()
+    </script>
+  </body>
+</html>
